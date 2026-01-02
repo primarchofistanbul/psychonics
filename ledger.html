@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The War Ledger - Valuation Matrix</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --green: #33ff33; 
+            --dim-green: #1a881a;
+            --bg: #050505;
+            --panel-bg: rgba(0, 20, 0, 0.85);
+            --border: 2px solid var(--green);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--green);
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            text-shadow: 0 0 3px var(--dim-green);
+        }
+
+        /* CRT Overlay */
+        body::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .main-interface {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        @media (max-width: 800px) {
+            .main-interface { grid-template-columns: 1fr; }
+        }
+
+        /* Panels */
+        .panel {
+            border: var(--border);
+            background: var(--panel-bg);
+            padding: 20px;
+            box-shadow: 0 0 20px var(--dim-green) inset;
+            position: relative;
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 1px dashed var(--green);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 1rem;
+            color: var(--dim-green);
+            margin-bottom: 3px;
+        }
+
+        select, input[type="text"], input[type="number"] {
+            background: #000;
+            border: 1px solid var(--green);
+            color: var(--green);
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            padding: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            box-shadow: 0 0 10px var(--green);
+        }
+
+        /* Scrolling Checkbox Lists for Multi-Select */
+        .scroll-list {
+            height: 120px;
+            overflow-y: auto;
+            border: 1px solid var(--green);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+        }
+
+        /* Scrollbar Styling */
+        .scroll-list::-webkit-scrollbar { width: 8px; }
+        .scroll-list::-webkit-scrollbar-track { background: #000; }
+        .scroll-list::-webkit-scrollbar-thumb { background: var(--dim-green); }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 2px 0;
+            font-size: 1rem;
+            border-bottom: 1px solid rgba(51, 255, 51, 0.1);
+        }
+        .list-item:hover { background: rgba(51, 255, 51, 0.1); }
+        .list-item input { width: auto; margin-right: 8px; cursor: pointer; }
+        .list-item span { cursor: pointer; width: 100%; display: flex; justify-content: space-between; padding-right: 5px; }
+        .item-special { font-size: 0.85rem; color: #698c69; font-style: italic; text-align: right;}
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box { text-align: center; }
+        .stat-note { font-size: 0.8rem; color: #888; }
+        
+        /* Checkboxes Group (Tags) */
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .checkbox-group label {
+            display: flex; align-items: center; cursor: pointer; color: var(--green);
+        }
+        .checkbox-group input { width: 15px; height: 15px; appearance: none; border: 1px solid var(--green); margin-right: 8px; position: relative; }
+        .checkbox-group input:checked::after { content: 'X'; position: absolute; top: -3px; left: 2px; font-size: 14px; color: var(--green); }
+
+        /* Data Card (Right Side) */
+        .data-card {
+            border: 2px solid var(--green);
+            padding: 15px;
+            background: #000;
+            margin-top: 20px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .card-header {
+            display: flex; justify-content: space-between; border-bottom: 2px solid var(--green); padding-bottom: 5px; margin-bottom: 10px; font-size: 1.4rem; font-weight: bold;
+        }
+
+        .stat-row {
+            display: grid; grid-template-columns: repeat(6, 1fr); text-align: center; border-bottom: 1px solid var(--green); margin-bottom: 10px; padding-bottom: 5px;
+        }
+
+        .calculation-breakdown {
+            font-size: 0.9rem; color: var(--dim-green); border-top: 1px dotted var(--dim-green); margin-top: 10px; padding-top: 5px;
+        }
+
+        .total-points {
+            font-size: 2rem; text-align: right; margin-top: 20px; border-top: 1px double var(--green); padding-top: 10px;
+        }
+
+        .blink { animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .back-btn {
+            position: fixed; top: 20px; left: 20px; border: 1px solid var(--green); padding: 5px 10px; text-decoration: none; color: var(--green); background: #000; z-index: 1000;
+        }
+        .back-btn:hover { background: var(--green); color: #000; }
+
+    </style>
+</head>
+<body>
+
+<a href="#" class="back-btn" onclick="history.back()">< BACK</a>
+
+<div class="main-interface">
+    
+    <div class="panel">
+        <h2>>> INPUT PARAMETERS</h2>
+
+        <div class="form-group">
+            <label>SOURCE ARMORY</label>
+            <select id="factionSelect" onchange="updateArmory()">
+                <option value="human">HUMAN</option>
+                <option value="eloi">ELOI</option>
+                <option value="morloch">MORLOCH</option>
+                <option value="entomon">ENTOMON</option>
+                <option value="chitinsan">CHITINSAN</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>MODEL NAME</label>
+            <input type="text" id="modelName" value="RICK" oninput="calculate()">
+        </div>
+
+        <label>>> BIOLOGICAL PROFILE (Ref: Rick)</label>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <label>MOV</label>
+                <input type="number" id="statMOV" value="8" oninput="calculate()">
+            </div>
+            <div class="stat-box">
+                <label>MSL (Target #)</label>
+                <input type="number" id="statMSL" value="4" oninput="calculate()">
+                <span class="stat-note">Lower = costlier</span>
+            </div>
+            <div class="stat-box">
+                <label>MLE</label>
+                <input type="number" id="statMLE" value="3" oninput="calculate()">
+            </div>
+            <div class="stat-box">
+                <label>STR</label>
+                <input type="number" id="statSTR" value="3" oninput="calculate()">
+            </div>
+            <div class="stat-box">
+                <label>DEF</label>
+                <input type="number" id="statDEF" value="3" oninput="calculate()">
+            </div>
+            <div class="stat-box">
+                <label>MRL</label>
+                <input type="number" id="statMRL" value="7" oninput="calculate()">
+            </div>
+        </div>
+
+        <label>>> TAGS & SKILLS</label>
+        <div class="stats-grid" style="margin-top: 10px;">
+            <div class="stat-box">
+                <label>AGGRESSIVE</label>
+                <input type="number" id="skillAggro" value="0" min="0" oninput="calculate()">
+            </div>
+            <div class="stat-box">
+                <label>TOUGH</label>
+                <input type="number" id="skillTough" value="0" min="0" oninput="calculate()">
+            </div>
+            <div class="stat-box">
+                <label>PSYCH (Max 6)</label>
+                <input type="number" id="skillPsych" value="0" min="0" max="6" oninput="validatePsych(this)">
+            </div>
+        </div>
+
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="checkMounted" onchange="calculate()"> MOUNTED (+5pt)</label>
+            <label><input type="checkbox" id="checkScout" onchange="calculate()"> SCOUT (+3pt)</label>
+        </div>
+
+        <hr style="border: 0; border-top: 1px dashed var(--dim-green); margin: 20px 0;">
+
+        <div class="form-group">
+            <label>PRIMARY WEAPONS</label>
+            <div id="listPrimary" class="scroll-list"></div>
+        </div>
+
+        <div class="form-group">
+            <label>SIDEARM / MELEE</label>
+            <div id="listSecondary" class="scroll-list"></div>
+        </div>
+
+        <div class="form-group">
+            <label>ARMOUR (Max 1 Suit)</label>
+            <div id="listArmour" class="scroll-list"></div>
+        </div>
+
+        <div class="form-group">
+            <label>GRENADES / MISC</label>
+            <div id="listGear" class="scroll-list"></div>
+        </div>
+
+        <div class="form-group">
+            <label>PSYCHOTECHNICALS / EXTRA</label>
+            <div id="listExtra" class="scroll-list"></div>
+        </div>
+
+    </div>
+
+    <div class="panel">
+        <h2>>> UNIT REGISTRY CARD</h2>
+        <div class="data-card" id="printCard">
+            <div class="card-header">
+                <span id="dispName">RICK</span>
+                <span id="dispFaction">HUMAN</span>
+            </div>
+            
+            <div class="stat-row">
+                <div>MOV</div><div>MSL</div><div>MLE</div><div>STR</div><div>DEF</div><div>MRL</div>
+                <div id="dMOV">8</div><div id="dMSL">4+</div><div id="dMLE">3</div><div id="dSTR">3</div><div id="dDEF">3</div><div id="dMRL">7</div>
+            </div>
+
+            <div style="font-size: 1rem; color: var(--green); margin-bottom: 15px;">
+                <div id="dispWeapons"></div>
+                <div id="dispArmour"></div>
+                <div id="dispGear"></div>
+            </div>
+
+            <div style="border-top: 1px dotted var(--dim-green); padding-top: 5px;">
+                <strong>TAGS:</strong><br>
+                <span id="dispSkills" style="color: #88ff88;">-</span>
+            </div>
+
+            <div class="calculation-breakdown" id="debugCalc">
+                Base: 5 | Modifiers: 0 | Profile: 5
+            </div>
+
+            <div class="total-points">
+                VALUATION: <span id="finalPoints" class="blink">5</span> PTS
+            </div>
+        </div>
+        <p style="text-align: center; font-size: 0.9rem; color: var(--dim-green); margin-top: 20px;">
+            > PRESS [PRT SC] TO EXPORT RECORD<br>
+            > MULTIPLIER APPLIES TO PROFILE > 10
+        </p>
+    </div>
+
+</div>
+
+<script>
+    // === RULES DATA ===
+    const BASE_STATS = { MOV: 8, MSL: 4, MLE: 3, STR: 3, DEF: 3, MRL: 7 };
+    const BASE_COST = 5;
+
+    const STAT_STEP_COSTS = {
+        MOV: 0.5, MSL: 0.25, MLE: 0.5, STR: 1, DEF: 1, MRL: 0.25
+    };
+
+    const PSYCH_TABLE = [0, 5, 10, 20, 40, 80, 160];
+
+    const ARMORY = {
+        human: {
+            ranged: [
+                {n:"Scattergun", p:1.5, s:""}, 
+                {n:"Short-pattern Rifle", p:1, s:"knockback"}, 
+                {n:"Assault-pattern Rifle", p:1.5, s:"burst"},
+                {n:"Precision Rifle", p:1, s:"fixed"}, 
+                {n:"Flamer", p:1.5, s:"see desc"}, 
+                {n:"Aldur Rifle", p:1.5, s:"burst"}, 
+                {n:"Laser Rifle", p:1.5, s:"afterburn"},
+                {n:"Plasma Carbine", p:2, s:"overheat"}, 
+                {n:"Mindlance", p:2, s:"fixed, psychonic"}, 
+                {n:"Arafic Disruptor", p:3, s:"psychonic"}, 
+                {n:"Dreamwave Projector", p:2, s:"psychonic"},
+                {n:"Autogun", p:3, s:"heavy, burst"}, 
+                {n:"Grenade Launcher", p:3, s:"fixed"}, 
+                {n:"Heavy Aldur", p:3, s:"fixed, burst"}, 
+                {n:"Laser Cannon", p:4, s:"fixed, afterburn"}, 
+                {n:"Plasma Battery", p:6, s:"fixed, overheat"}
+            ],
+            melee: [
+                {n:"Knife", p:0, s:""}, 
+                {n:"Sawn-off Scattergun", p:1.5, s:"knockback"}, 
+                {n:"Pistol", p:0.5, s:""}, 
+                {n:"Aldur Pistol", p:1.5, s:"burst"},
+                {n:"Laser Pistol", p:1, s:"afterburn"}, 
+                {n:"Plasma Pistol", p:2, s:"overheat"}, 
+                {n:"Hızar (Motor-bayonet)", p:1.5, s:""},
+                {n:"Sword", p:1, s:""}, 
+                {n:"Axe", p:1, s:""}, 
+                {n:"Hammer", p:1, s:"shieldbreaker"}, 
+                {n:"Psychon Rod", p:2, s:"psychonic, 2-handed"},
+                {n:"Psychon Sword", p:1.5, s:"psychonic"}, 
+                {n:"Psychon Axe", p:2, s:"psychonic"}, 
+                {n:"Psychon Gauntlet", p:2.5, s:"psychonic"}
+            ],
+            armour: [
+                {n:"Flak Armour", p:0.5, s:"+1 Def", dv:1, suit:true}, 
+                {n:"Mesh Armour", p:1, s:"+2 Def", dv:2, suit:true}, 
+                {n:"Carapace Armour", p:1.5, s:"+3 Def", dv:3, suit:true},
+                {n:"CEBE: URN", p:1, s:"+1 Def, sealed", dv:1, suit:true}, 
+                {n:"CEBE: COFIN", p:1.5, s:"+2 Def, sealed", dv:2, suit:true}, 
+                {n:"CEBE: CASKET", p:2, s:"+3 Def, sealed", dv:3, suit:true},
+                {n:"Shield", p:0.5, s:"+1 Def (melee)", dv:1}, 
+                {n:"Displacer Field", p:4, s:"4+ Negate"}, 
+                {n:"Refractor Field", p:2, s:"5+ Negate"}, 
+                {n:"Psychic Halo", p:0.5, s:"+1 Ward"}
+            ],
+            grenades: [
+                {n:"Defoilant G.", p:0.5, s:""}, 
+                {n:"Choke G.", p:1, s:"1d2 turns"}, 
+                {n:"Frag G.", p:1, s:"Str 3"}, 
+                {n:"Plasma G.", p:3, s:"Str 5"},
+                {n:"Smoke G.", p:1, s:"2 turns"}, 
+                {n:"Toxin G.", p:2, s:"Str 3"}, 
+                {n:"Virus G.", p:2.5, s:"Str 4"}, 
+                {n:"PMP G.", p:1, s:""}, 
+                {n:"Breacher G.", p:2, s:"Str 6"}
+            ],
+            psychos: [
+                {n:"Aura Beacon", p:1, s:"Morale pass"}, 
+                {n:"Cognitive Anchor", p:2, s:"+1 Ward"}, 
+                {n:"Null Pylon", p:2, s:"No powers"}, 
+                {n:"Neurocalm", p:0.5, s:"Remove pin"},
+                {n:"Trauma-patch", p:1, s:"Heal 1"}, 
+                {n:"Ocular Link", p:2, s:"+1 Msl, no run"}
+            ]
+        },
+        eloi: {
+            ranged: [
+                {n:"Photon Rifle", p:1, s:""}, 
+                {n:"Fusion Rifle", p:3, s:"afterburn"}, 
+                {n:"Resonance Projector", p:1.5, s:"blast"},
+                {n:"Photon Driver", p:2.5, s:"fixed"}, 
+                {n:"Fusion Disruptor", p:4, s:"overheat, fixed"}, 
+                {n:"Resonant Shear", p:0.5, s:"two-handed"},
+                {n:"Photon Ballista", p:3.5, s:"burst, fixed"}, 
+                {n:"Fusion Lance Array", p:9, s:"fixed, afterburn"}, 
+                {n:"Resonance Siege Proj.", p:6, s:"fixed, heavy, demo"}
+            ],
+            melee: [
+                {n:"Knife", p:0, s:""}, 
+                {n:"Needler", p:0.5, s:""}, 
+                {n:"Fuspistol", p:1, s:""}, 
+                {n:"Respistol", p:1, s:"knockback"},
+                {n:"Glaive", p:2, s:"psychonic"}, 
+                {n:"Glyphblade", p:2, s:"psychonic"}, 
+                {n:"Glyphmaul", p:3, s:"psychonic"},
+                {n:"Phase Talon", p:1, s:"shieldbreaker"}, 
+                {n:"Null Trident", p:1.5, s:"nullify"}, 
+                {n:"Archcutter", p:1, s:"two-handed"}
+            ],
+            armour: [
+                {n:"Harness", p:0.5, s:"+1 Def", dv:1, suit:true}, 
+                {n:"Mantle", p:1, s:"+2 Def", dv:2, suit:true}, 
+                {n:"Panoply", p:1.5, s:"+3 Def", dv:3, suit:true},
+                {n:"Shield", p:0.5, s:"+1 Def (melee)", dv:1}, 
+                {n:"Glyph Aura", p:2, s:"5+ Negate"}, 
+                {n:"Glyph Charm", p:0.5, s:"+1 Ward"}
+            ],
+            grenades: [], 
+            psychos: []
+        },
+        morloch: {
+            ranged: [
+                {n:"Foton", p:1, s:""}, 
+                {n:"Fujon", p:3, s:"afterburn"}, 
+                {n:"Bolton", p:1, s:""}, 
+                {n:"Stake Gun", p:1, s:"fixed, knockback"},
+                {n:"Hydra", p:1.5, s:"burst, knockback"}, 
+                {n:"Seismic Thumper", p:1.5, s:"blast"}, 
+                {n:"Slag Lance", p:5, s:"afterburn, heavy"}, 
+                {n:"Stoper", p:2.5, s:"fixed, knockback"}
+            ],
+            melee: [
+                {n:"Knife", p:0, s:""}, 
+                {n:"Shovel", p:0.5, s:""}, 
+                {n:"Hammer", p:0.5, s:""}, 
+                {n:"Nail Gun", p:0.5, s:""},
+                {n:"Pneumatic Pick", p:1, s:"pierce"}, 
+                {n:"Rock Drill", p:1.5, s:""}, 
+                {n:"Jackleg Drill", p:1.5, s:"heavy"},
+                {n:"Titanbore", p:1, s:"heavy, 2-handed"}, 
+                {n:"Jaw Crusher", p:2.5, s:"heavy, 2-handed"}, 
+                {n:"Diamond Chainsaw", p:2, s:"shieldbreaker"}
+            ],
+            armour: [
+                {n:"Scrap Plate", p:0.5, s:"+1 Def", dv:1, suit:true}, 
+                {n:"Hull Plate", p:1, s:"+2 Def", dv:2, suit:true}, 
+                {n:"Deep Drill Suit", p:1.5, s:"+1 Def, sealed", dv:1, suit:true},
+                {n:"Blast Door Shield", p:0.5, s:"+1 Def (melee)", dv:1}
+            ],
+            grenades: [],
+            psychos: []
+        },
+        entomon: {
+            ranged: [
+                {n:"Spinneret", p:1, s:""},
+                {n:"Urticator", p:1.5, s:"knockback"},
+                {n:"Spouter", p:1.5, s:"burst"},
+                {n:"Stridulator", p:2, s:"psychonic"},
+                {n:"Pygidial Sprayer", p:1.5, s:"afterburn"},
+                {n:"Spitter", p:1, s:""}
+            ],
+            melee: [
+                {n:"Claw", p:0.5, s:""},
+                {n:"Chela", p:0.5, s:""},
+                {n:"Stinger", p:1, s:"shieldbreaker"},
+                {n:"Proboscis", p:0.5, s:""},
+                {n:"Raptorial Leg", p:1, s:""},
+                {n:"Mandibles", p:2, s:"shieldbreaker"}
+            ],
+            armour: [], // Biomorphs only
+            grenades: [],
+            psychos: []
+        }
+    };
+
+    // CHITINSAN: Access to Human Armory + Entomon Bioweaponry
+    ARMORY.chitinsan = {
+        ranged: [...ARMORY.human.ranged, ...ARMORY.entomon.ranged],
+        melee: [...ARMORY.human.melee, ...ARMORY.entomon.melee],
+        armour: ARMORY.human.armour,
+        grenades: ARMORY.human.grenades,
+        psychos: ARMORY.human.psychos
+    };
+
+    function validatePsych(el) {
+        if(el.value > 6) el.value = 6;
+        if(el.value < 0) el.value = 0;
+        calculate();
+    }
+
+    function renderList(containerId, items, isArmour = false) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = ""; 
+        
+        if(!items || items.length === 0) {
+            container.innerHTML = "<div style='color:#555; padding:5px;'>-- None Available --</div>";
+            return;
+        }
+
+        items.forEach((item, index) => {
+            const div = document.createElement("div");
+            div.className = "list-item";
+            
+            const chk = document.createElement("input");
+            chk.type = "checkbox";
+            chk.value = item.p;
+            chk.dataset.name = item.n;
+            chk.dataset.special = item.s || ""; 
+            chk.dataset.dv = item.dv || 0;
+            chk.id = `${containerId}_${index}`;
+            
+            if (isArmour && item.suit) {
+                chk.classList.add('suit-armor');
+                chk.onclick = function() {
+                    if (this.checked) {
+                        const allSuits = container.querySelectorAll('.suit-armor');
+                        allSuits.forEach(s => {
+                            if(s !== this) s.checked = false;
+                        });
+                    }
+                    calculate();
+                };
+            } else {
+                chk.onclick = calculate;
+            }
+
+            const label = document.createElement("span");
+            label.onclick = function() { chk.click(); };
+            label.innerHTML = `${item.n} [${item.p}] <span class="item-special">${item.s}</span>`;
+
+            div.appendChild(chk);
+            div.appendChild(label);
+            container.appendChild(div);
+        });
+    }
+
+    function updateArmory() {
+        const faction = document.getElementById('factionSelect').value;
+        const data = ARMORY[faction];
+        
+        renderList('listPrimary', data.ranged);
+        renderList('listSecondary', data.melee);
+        renderList('listArmour', data.armour, true); 
+        
+        // Fallbacks for empty sub-lists in other factions if not defined, 
+        // but here every faction is fully defined above.
+        let grenadesList = (data.grenades && data.grenades.length > 0) ? data.grenades : [];
+        // Human/Chitinsan fallback handled by data structure now
+        if(faction === 'human' || faction === 'chitinsan') grenadesList = ARMORY['human'].grenades;
+        renderList('listGear', grenadesList);
+
+        let psychoList = (data.psychos && data.psychos.length > 0) ? data.psychos : [];
+        if(faction === 'human' || faction === 'chitinsan') psychoList = ARMORY['human'].psychos;
+        renderList('listExtra', psychoList);
+
+        document.getElementById('dispFaction').innerText = faction.toUpperCase();
+        
+        // Auto-check Knife logic (Disabled for pure Entomon)
+        if(faction !== 'entomon') {
+            const knifeChk = document.querySelector('input[data-name="Knife"]');
+            if(knifeChk) {
+                knifeChk.checked = true;
+            }
+        }
+
+        calculate();
+    }
+
+    function getCheckedItems(containerId) {
+        let total = 0;
+        let totalDv = 0;
+        let items = [];
+        const container = document.getElementById(containerId);
+        const checks = container.querySelectorAll('input[type="checkbox"]:checked');
+        
+        checks.forEach(chk => {
+            total += parseFloat(chk.value);
+            totalDv += parseInt(chk.dataset.dv || 0);
+
+            let nameStr = chk.dataset.name;
+            if(chk.dataset.special) {
+                nameStr += ` (${chk.dataset.special})`;
+            }
+            items.push(nameStr);
+        });
+        
+        return { cost: total, names: items, dv: totalDv };
+    }
+
+    function calculate() {
+        const userStats = {
+            MOV: parseFloat(document.getElementById('statMOV').value) || 0,
+            MSL: parseFloat(document.getElementById('statMSL').value) || 0,
+            MLE: parseFloat(document.getElementById('statMLE').value) || 0,
+            STR: parseFloat(document.getElementById('statSTR').value) || 0,
+            DEF: parseFloat(document.getElementById('statDEF').value) || 0,
+            MRL: parseFloat(document.getElementById('statMRL').value) || 0
+        };
+
+        let statCost = 0;
+        statCost += (userStats.MOV - BASE_STATS.MOV) * STAT_STEP_COSTS.MOV;
+        statCost += (userStats.MLE - BASE_STATS.MLE) * STAT_STEP_COSTS.MLE;
+        statCost += (userStats.STR - BASE_STATS.STR) * STAT_STEP_COSTS.STR;
+        statCost += (userStats.DEF - BASE_STATS.DEF) * STAT_STEP_COSTS.DEF;
+        statCost += (userStats.MRL - BASE_STATS.MRL) * STAT_STEP_COSTS.MRL;
+        const mslImprovement = BASE_STATS.MSL - userStats.MSL;
+        statCost += mslImprovement * STAT_STEP_COSTS.MSL;
+
+        let tagCost = 0;
+        let skillsText = [];
+
+        const aggroLvl = parseInt(document.getElementById('skillAggro').value) || 0;
+        if(aggroLvl > 0) {
+            tagCost += aggroLvl * 5;
+            skillsText.push(`AGGRESSIVE(${aggroLvl+1})`);
+        }
+
+        const toughLvl = parseInt(document.getElementById('skillTough').value) || 0;
+        if(toughLvl > 0) {
+            tagCost += toughLvl * 4;
+            skillsText.push(`TOUGH(${toughLvl+1})`);
+        }
+
+        let psychLvl = parseInt(document.getElementById('skillPsych').value) || 0;
+        if(psychLvl > 6) psychLvl = 6;
+        if(psychLvl > 0) {
+            tagCost += PSYCH_TABLE[psychLvl];
+            skillsText.push(`PSYCH-${psychLvl}`);
+        }
+
+        if(document.getElementById('checkMounted').checked) {
+            tagCost += 5;
+            skillsText.push("MOUNTED");
+        }
+        if(document.getElementById('checkScout').checked) {
+            tagCost += 3;
+            skillsText.push("SCOUT");
+        }
+
+        let rawProfile = BASE_COST + statCost + tagCost;
+        if(rawProfile < 1) rawProfile = 1;
+
+        let multiplier = 1;
+        if(rawProfile > 10) {
+            if(rawProfile <= 15) multiplier = 1.5;
+            else if(rawProfile <= 20) multiplier = 2;
+            else if(rawProfile <= 30) multiplier = 3;
+            else if(rawProfile <= 40) multiplier = 4;
+            else if(rawProfile <= 50) multiplier = 5;
+            else {
+                multiplier = 5 + Math.ceil((rawProfile - 50) / 10);
+            }
+        }
+
+        let multipliedProfile = rawProfile * multiplier;
+
+        const rPrimary = getCheckedItems('listPrimary');
+        const rSecondary = getCheckedItems('listSecondary');
+        const rArmour = getCheckedItems('listArmour');
+        const rGear = getCheckedItems('listGear');
+        const rExtra = getCheckedItems('listExtra');
+
+        let equipCost = rPrimary.cost + rSecondary.cost + rArmour.cost + rGear.cost + rExtra.cost;
+        const totalFinal = multipliedProfile + equipCost;
+
+        // Display
+        document.getElementById('dispName').innerText = document.getElementById('modelName').value || "RICK";
+        
+        document.getElementById('dMOV').innerText = userStats.MOV;
+        document.getElementById('dMSL').innerText = userStats.MSL + "+";
+        document.getElementById('dMLE').innerText = userStats.MLE;
+        document.getElementById('dSTR').innerText = userStats.STR;
+        
+        let defDisplay = userStats.DEF;
+        if(rArmour.dv > 0) {
+            defDisplay += ` (+${rArmour.dv})`;
+        }
+        document.getElementById('dDEF').innerText = defDisplay;
+
+        document.getElementById('dMRL').innerText = userStats.MRL;
+
+        let allWeapons = [...rPrimary.names, ...rSecondary.names];
+        document.getElementById('dispWeapons').innerText = "WEAPONS: " + (allWeapons.length ? allWeapons.join(", ") : "-");
+
+        document.getElementById('dispArmour').innerText = "ARMOUR: " + (rArmour.names.length ? rArmour.names.join(", ") : "-");
+
+        let allGear = [...rGear.names, ...rExtra.names];
+        document.getElementById('dispGear').innerText = "GEAR: " + (allGear.length ? allGear.join(", ") : "-");
+
+        document.getElementById('dispSkills').innerText = skillsText.length ? skillsText.join(", ") : "-";
+
+        document.getElementById('debugCalc').innerHTML = 
+            `Base Profile: ${rawProfile.toFixed(2)} x ${multiplier} (Mult) = ${multipliedProfile.toFixed(2)}<br>` +
+            `+ Gear: ${equipCost}`;
+
+        document.getElementById('finalPoints').innerText = +totalFinal.toFixed(2);
+    }
+
+    // Init
+    updateArmory();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tactical Mission Gen v3.0</title>
+    <style>
+        /* --- RETRO MILITARY TERMINAL STYLE --- */
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --phosphor: #33ff33; /* Standard Green */
+            --phosphor-dim: #1a881a;
+            --alert: #ff3333;     /* Red for high aggression/complications */
+            --amber: #ffcc00;     /* Amber for Special Ops */
+            --bg: #050505;
+            --panel-bg: rgba(0, 15, 0, 0.85);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--phosphor);
+            font-family: 'VT323', monospace;
+            font-size: 1.3rem;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            text-shadow: 0 0 3px var(--phosphor-dim);
+            overflow: hidden; 
+        }
+
+        /* CRT Scanline Overlay */
+        body::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+            background-size: 100% 3px, 6px 100%;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            border: 2px solid var(--phosphor);
+            padding: 2px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 15px var(--phosphor-dim) inset;
+        }
+
+        /* Header */
+        header {
+            background: var(--phosphor);
+            color: var(--bg);
+            text-align: center;
+            padding: 5px;
+            font-weight: bold;
+            font-size: 1.6rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Main Display Area */
+        .screen {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+            position: relative;
+            background: rgba(0, 10, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Scrollbar */
+        .screen::-webkit-scrollbar { width: 10px; }
+        .screen::-webkit-scrollbar-track { background: #000; border-left: 1px solid var(--phosphor-dim); }
+        .screen::-webkit-scrollbar-thumb { background: var(--phosphor); border: 1px solid #000; }
+
+        /* Controls */
+        .controls {
+            border-top: 2px solid var(--phosphor);
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 20, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            background: #000;
+            color: var(--phosphor);
+            border: 2px solid var(--phosphor);
+            font-family: 'VT323', monospace;
+            font-size: 1.4rem;
+            padding: 10px 30px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 5px var(--phosphor-dim);
+            transition: all 0.1s;
+        }
+
+        button:hover {
+            background: var(--phosphor);
+            color: #000;
+            box-shadow: 0 0 20px var(--phosphor);
+        }
+
+        button:active { transform: translateY(2px); }
+
+        /* Complication Button Style */
+        .btn-alert {
+            border-color: var(--alert);
+            color: var(--alert);
+            box-shadow: 0 0 5px var(--alert);
+        }
+        .btn-alert:hover {
+            background: var(--alert);
+            color: #000;
+            box-shadow: 0 0 20px var(--alert);
+        }
+
+        /* Briefing Elements */
+        .mission-header {
+            border-bottom: 2px dashed var(--phosphor);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+
+        .category-label {
+            font-size: 2.2rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .sub-label {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            font-family: monospace;
+        }
+
+        .briefing-text {
+            line-height: 1.5;
+            font-size: 1.4rem;
+            margin-bottom: 30px;
+            white-space: pre-wrap; /* Preserve formatting */
+        }
+
+        .tactical-advice {
+            border: 1px solid var(--amber);
+            color: var(--amber);
+            padding: 15px;
+            font-size: 1rem;
+            background: rgba(40, 30, 0, 0.25);
+            margin-top: auto;
+        }
+
+        /* Complication Alert Box */
+        .complication-box {
+            border: 2px solid var(--alert);
+            background: rgba(50, 0, 0, 0.2);
+            padding: 15px;
+            margin-top: 20px;
+            animation: flashBorder 2s infinite;
+            display: none; /* Hidden by default */
+        }
+
+        .comp-title {
+            color: var(--alert);
+            font-weight: bold;
+            font-size: 1.4rem;
+            border-bottom: 1px solid var(--alert);
+            margin-bottom: 10px;
+        }
+
+        .comp-rules {
+            font-size: 0.9rem;
+            color: #ffaaaa;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .comp-content {
+            font-size: 1.3rem;
+            color: #fff;
+        }
+
+        /* Typing cursor */
+        .cursor {
+            display: inline-block;
+            width: 12px;
+            height: 1.4rem;
+            background: var(--phosphor);
+            animation: blinker 1s step-end infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blinker { 50% { opacity: 0; } }
+        @keyframes flashBorder { 
+            0% { box-shadow: 0 0 5px var(--alert) inset; } 
+            50% { box-shadow: 0 0 20px var(--alert) inset; } 
+            100% { box-shadow: 0 0 5px var(--alert) inset; } 
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        // MISSION CONTROL // SCENARIO GEN_v3.0
+    </header>
+
+    <div class="screen" id="screen">
+        <div style="margin-top: 40%; text-align: center;">
+            <p>> SYSTEM READY.</p>
+            <p>> AWAITING ENCRYPTION KEY...</p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="generateMission()">[ GENERATE MISSION ]</button>
+        <button class="btn-alert" onclick="generateComplication()">[ SIMULATE COMPLICATION ]</button>
+    </div>
+</div>
+
+<script>
+    // --- DATA TABLES ---
+    
+    const categories = {
+        1: "REVENGE",
+        2: "INVESTIGATE A WORLD",
+        3: "INVESTIGATE AN ODDITY",
+        4: "QUELL A REBELLION",
+        5: "RAID TO KILL, DESTROY OR RESCUE",
+        6: "SPECIAL OPERATIONS"
+    };
+
+    const scenarios = {
+        "REVENGE": {
+            1: "A minor officer’s execution was recorded and circulated as propaganda. The avenging force has tracked the perpetrators to a forward camp before they can relocate. Kill the enemy leader at all costs.",
+            2: "A morloch enclave sabotaged an eloi reactor years ago. Now the maintenance tunnels have been located, and repayment is coming, loud and personal.",
+            3: "A former officer turned separatist has been located in a fortified bunker. The attacker must breach the defences and eliminate the target; the defender must hold out until extraction arrives (Turn 6).",
+            4: "The enemy burned a village under your protection. You cannot save the village, but you can ensure they don't enjoy the victory. Destroy all enemy supply caches (3 markers) on the map.",
+            5: "An entomon brood-mind was fragmented in a previous engagement. The surviving ‘monids have converged on the killers’ supply convoy.",
+            6: "A solar sign was desecrated. The custodial force does not care who did it—only who is closest when they arrive."
+        },
+        "INVESTIGATE A WORLD": {
+            1: "Civil war has broken out on a world and a state of anarchy prevails. The local government has requested help to cleanse areas of strategic importance from insurgents.",
+            2: "A PMC has landed on a world and captured and enslaved a settlement. The local government has requested assistance in destroying them.",
+            3: "A popular rebellion on a world has destroyed all forms of government and reduced the planet to chaos. Clear and secure presidential palace to make way for a new administration.",
+            4: "Long-range scans show a populated world where none should exist. A landing party is dispatched before orbital authorities notice.",
+            5: "An old evacuation site is reoccupied. The new inhabitants are armed, organized, and hostile to questions.",
+            6: "A terraforming experiment exceeded projections. Now the ecosystem itself resists further interference."
+        },
+        "INVESTIGATE AN ODDITY": {
+            1: "A research station has passed its routine report submission deadline and a unit is sent to investigate.",
+            2: "A derelict ship appears in low orbit, broadcasting a distress call dated centuries in the future.",
+            3: "An ancient machine begins drawing power from nowhere. Shutting it down risks collapsing the surrounding infrastructure. Shut it down and kill any who oppose.",
+            4: "A glyph pattern starts rewriting itself mid-engagement. Eloi forces attempt containment while others try to seize fragments. Extract before getting overwhelmed.",
+            5: "A xenoarcheological research station has reported remnants of a long-gone civilisation. Investigate the ruins and make sure they are safe for researchers. Clear out any anomalies.",
+            6: "A solar sign activates without warning during a dust storm. Multiple factions converge before it stabilizes—or detonates."
+        },
+        "QUELL A REBELLION": {
+            1: "A long civil war is reaching its end, with the final rebel stronghold now located and under attack. The rebels are entrenched in an old ruined building in a forest, and only a direct assault will end this matter.",
+            2: "Political rebels have overtaken a spaceport hours before the arrival of an important shipment. Delaying this critical cargo would have catastrophic consequences, and any sign of inability to control the starport would be disastrous. Recapture it.",
+            3: "The planet's government has decided to break away and become independent, supporting help from the xenoids. By relaxing laws controlling the use of psychonics and tax collection, he has gained significant popularity. A GÖK unit has been sent to take the senate and kill or capture the rebellious politicians before the world is completely lost.",
+            4: "A PMC has broken into the planetary assembly and is holding the whole MPs prisoner. The planet is also home to a GÖK, and the GÖK commander has ordered a full assault upon the senate building.",
+            5: "The unexpected fall of the government has initiated a civil war between the TDF commander and popular leaders backed by secretly pro-xenoid factions. The military controls the bases, but the rebels have popular support and controls food and water supplies. The military must secure vital production installations to crush the rebels.",
+            6: "A popular uprising on a distant research station has divided the population. The workers feel aggrieved and are determined to overthrow the administration and establish a co-operative. Currently, each side controls half of the settlements supporting the station, but the workers at a critical infrastructural facility remain neutral. Either capture the infrastructural facility and force the rebels out, or crush them via direct assault."
+        },
+        "RAID TO KILL, DESTROY OR RESCUE": {
+            1: "A world has been identified as a base of operations of a rogue PMC which has plagued the local system for years. A force has been sent to destroy the PMC's headquarters, spacecraft and/or landing pads.",
+            2: "A Procurator has uncovered a xenoid attempt to invade the Solar System! The procurator and a group of solar gendarmes have successfully thwarted the plot. Yet, during their efforts, the procurator and his retinue of solar gendarmerie have accessed highly classified information. A force has been sent to kill the Procurator and his men.",
+            3: "A spacecraft carrying xeno-archeological relics of highest importance has crashed on a world. Two factions arrive to claim the relics, in addition to the authorities from the local populace.",
+            4: "The star system has been home to two rival GÖKs on two separate planets. Recent developments have revealed that a third and uninhabited planet on the system is rich in strategic resources. Since then, a series of skirmishes have erupted on this lonely planet. Capture the research station, and gather the research documents, samples all of whom are vital.",
+            5: "The xeno-archeological excavation site at the planet who has a corrosive atmosphere is under attack. The life-support habitations where the xeno-archeologists work and dwell is divided into sections with sealed gates, and is quite large. An enemy force has landed while most of the guards were away. The enemy force must enter the building, defeat the guards, and prepare to defend the habitations as the rest of the guards’ return.",
+            6: "The intel points to an imminent terrorist attack upon a strategic settlement with a missile equipped with a virus-warhead which would exterminate the entire populace in a matter of minutes. They have been located to hide in a silo deep in the desert. A small force is assigned to infiltrate the silo and neutralize the terrorists."
+        },
+        "SPECIAL OPERATIONS": {
+            1: "A covert comms-relay buried inside a deep infrastructure node has begun transmitting encrypted bursts during every dawn. A small unit is deployed to infiltrate the site, plant a disruption charge, and withdraw before the relay’s automated sentries fully awaken. Disable the relay and extract at least half the force.",
+            2: "An embedded informant within a planetary ministry has secured access to a classified audit archive implicating multiple off-world actors. The archive must be seized or destroyed before an internal security sweep arrives. Secure the data terminal and evacuate; defenders win if the archive is purged or the attackers are wiped out.",
+            3: "A sealed section of a starport has been declared empty after a psychonic incident, yet power draw and heat signatures persist. The unit is tasked with sweeping the compartment and eliminating any remaining entities without breaching the habitat hull. Confirm or neutralize all contacts while preventing structural damage; excessive firepower risks automatic loss.",
+            4: "A convoy supporting an ongoing insurgency relies on a single mobile command vehicle to coordinate its movements. The vehicle’s route is known, but only for a narrow window. Destroy or capture the command vehicle before it exits the table edge; defenders must delay or evacuate it.",
+            5: "Following an unsanctioned operation, a civilian research team possesses recordings that contradict the official report. A deniable unit is dispatched to secure the recordings and ensure no witnesses leave the zone. Recover or destroy all evidence markers; optional secondary objective to extract a named asset for interrogation.",
+            6: "A solar gate marked as inactive briefly flickers into partial alignment. A small team must insert through the unstable aperture, secure the far-side control pylons, and signal for shutdown before the gate destabilizes. Control both pylons simultaneously by the end of turn 4; failure risks catastrophic closure."
+        }
+    };
+
+    const complications = {
+        1: "COMMAND INTERFERENCE\nOrders conflict, signals lag, or authority is briefly unclear.\n>> All figures must pass a morale test first to perform this turn.",
+        2: "ENVIRONMENTAL SHIFT\nLocal conditions deteriorate unexpectedly: dust storms, power fluctuations, tremors, flooding, microgravity drift.\n>> Treat all open ground as difficult terrain until the end of the turn.",
+        3: "PSYCHOLOGICAL STRESS\nFear, doubt, blood-scent, or memetic pressure spreads through the engagement.\n>> All MORALE tests this turn must be re-rolled if successful.",
+        4: "SYSTEMS DEGRADATION\nWeapons clog, seals rupture, power cells misalign.\n>> The first time each figure shoots or attacks in melee after this event, roll a d6. On a 1, the action is wasted (no effect).",
+        5: "ATMOSPHERIC UPHEAVAL\nWhether it is a sudden dust storm, a venting steam pipe, or a deluge of acid rain, the battlefield is obscured.\n>> Maximum line of sight is limited to 30cm. Any shots fired at targets beyond this range automatically miss.",
+        6: "TEMPORAL PRESSURE\nSomething is about to arrive, collapse, or expire. Extraction windows close. Reinforcements loom. Structures destabilize.\n>> The game will now end one turn earlier than planned. If already on the final turn, this has no effect."
+    };
+
+    // --- LOGIC ---
+    
+    function d6() { return Math.floor(Math.random() * 6) + 1; }
+
+    // Typewriter effect variables
+    let typeInterval;
+    let currentMissionHTML = ""; // To store the mission so we can re-render it if comp is clicked
+
+    function typeWriter(text, elementId, speed = 8) {
+        const element = document.getElementById(elementId);
+        element.innerHTML = "";
+        let i = 0;
+        clearInterval(typeInterval);
+
+        function type() {
+            if (i < text.length) {
+                if (text.charAt(i) === '<') {
+                    let tag = "";
+                    while(text.charAt(i) !== '>' && i < text.length) {
+                        tag += text.charAt(i);
+                        i++;
+                    }
+                    tag += '>';
+                    i++;
+                    element.innerHTML += tag;
+                } else if (text.charAt(i) === '\n') {
+                    element.innerHTML += '<br>';
+                    i++;
+                } else {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                }
+            } else {
+                clearInterval(typeInterval);
+                element.innerHTML += '<span class="cursor"></span>'; 
+            }
+        }
+        typeInterval = setInterval(type, speed);
+    }
+
+    function generateMission() {
+        const screen = document.getElementById('screen');
+        
+        const catRoll = d6();
+        const subRoll = d6();
+        const category = categories[catRoll];
+        const missionText = scenarios[category][subRoll];
+
+        screen.innerHTML = `
+            <div class="mission-header">
+                <span class="sub-label">CAT. ${catRoll}-${subRoll} // DECRYPTING COMMAND PROTOCOLS...</span><br>
+                <span class="category-label" style="color:${getColor(catRoll)}">${category}</span>
+            </div>
+            
+            <div style="margin-bottom:10px; color: var(--phosphor-dim); font-size:0.9em;">// BRIEFING PACKET:</div>
+            <div id="briefing-content" class="briefing-text"></div>
+            
+            <div id="comp-slot" class="complication-box"></div>
+
+            <div class="tactical-advice">
+                <strong>// TACTICAL PARAMETERS (G.O. 421) //</strong><br>
+                If playing a fast-paced scenario, Commanders are advised to:<br>
+                > Assign a strict Turn Limit (Reinforcements/Extraction).<br>
+                > Determine reinforcement arrival vectors.<br>
+                > Set environmental escalation conditions.<br>
+                > LIMIT: Never assign more than three (3) physical objectives.
+            </div>
+        `;
+
+        typeWriter(missionText, 'briefing-content', 8);
+    }
+
+    function generateComplication() {
+        // Check if mission exists first, if not, create placeholder structure
+        const compSlot = document.getElementById('comp-slot');
+        if (!compSlot) {
+            // User hasn't generated mission yet, so we just clear screen and show comp
+            const screen = document.getElementById('screen');
+            screen.innerHTML = `<div id="comp-slot" class="complication-box" style="display:block; margin-top:10%;"></div>`;
+        }
+        
+        const slot = document.getElementById('comp-slot');
+        slot.style.display = "block";
+        slot.scrollIntoView({ behavior: 'smooth' });
+
+        const rollVal = d6();
+        const eventText = complications[rollVal];
+
+        slot.innerHTML = `
+            <div class="comp-title">>> INCOMING COMPLICATION PROTOCOL (ROLL: ${rollVal}) <<</div>
+            <div class="comp-rules">
+                <strong>TRIGGER:</strong> Initiative Sum ≥ 10 on any turn.<br>
+                <strong>CRITICAL:</strong> If Sum = 12, this event becomes PERMANENT.
+            </div>
+            <div class="comp-content">
+                ${eventText.replace(/\n/g, '<br>')}
+            </div>
+        `;
+    }
+
+    function getColor(catRoll) {
+        if (catRoll === 4) return "var(--alert)"; 
+        if (catRoll === 5) return "var(--alert)"; 
+        if (catRoll === 6) return "var(--amber)"; 
+        return "var(--phosphor)";
+    }
+
+</script>
+</body>
+</html>

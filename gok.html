@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GÖK Unit Generator</title>
+    <style>
+        /* --- RETRO MILITARY DATABASE STYLE --- */
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --phosphor: #33ff33; 
+            --dim: #1a881a;
+            --alert: #ff3333;
+            --accent: #ffcc00; /* Amber */
+            --bg: #050505;
+            --panel: rgba(0, 15, 0, 0.9);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--phosphor);
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            overflow-y: auto;
+            text-shadow: 0 0 2px var(--dim);
+        }
+
+        /* Scanline Overlay */
+        body::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+            background-size: 100% 3px, 6px 100%;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            border: 2px solid var(--phosphor);
+            box-shadow: 0 0 15px var(--dim) inset;
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+        }
+
+        /* Header */
+        header {
+            background: var(--phosphor);
+            color: #000;
+            padding: 10px;
+            text-align: center;
+            font-size: 1.6rem;
+            letter-spacing: 4px;
+            font-weight: bold;
+            border-bottom: 2px solid var(--phosphor);
+        }
+
+        .sub-header {
+            font-size: 0.9rem;
+            text-align: right;
+            padding: 5px 10px;
+            border-bottom: 1px solid var(--dim);
+            color: var(--dim);
+        }
+
+        /* Controls */
+        .controls {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--phosphor);
+            background: rgba(0, 20, 0, 0.5);
+        }
+
+        button {
+            background: #000;
+            color: var(--phosphor);
+            border: 2px solid var(--phosphor);
+            font-family: 'VT323', monospace;
+            font-size: 1.4rem;
+            padding: 10px 40px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 5px var(--dim);
+            transition: 0.2s;
+        }
+        button:hover {
+            background: var(--phosphor);
+            color: #000;
+            box-shadow: 0 0 20px var(--phosphor);
+        }
+
+        /* Data Display */
+        #output-area {
+            padding: 20px;
+            flex-grow: 1;
+            display: none; /* Hidden until generated */
+        }
+
+        /* Grid Layout for Profile */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .section {
+            border: 1px solid var(--dim);
+            padding: 15px;
+            position: relative;
+            background: rgba(0, 10, 0, 0.4);
+        }
+
+        .section-title {
+            position: absolute;
+            top: -12px;
+            left: 10px;
+            background: #000;
+            padding: 0 5px;
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 0.9rem;
+            border: 1px solid var(--dim);
+        }
+
+        .data-row {
+            margin-bottom: 8px;
+            border-bottom: 1px dashed #113311;
+            padding-bottom: 4px;
+        }
+        .data-row:last-child { border-bottom: none; }
+
+        .label { color: var(--dim); font-size: 0.85em; text-transform: uppercase; display: block; }
+        .value { font-size: 1.2em; font-weight: bold; color: var(--phosphor); line-height: 1.2; }
+        .detail { font-size: 0.9em; font-style: italic; color: #aaa; display: block; margin-top: 2px; }
+
+        .full-width { grid-column: 1 / -1; }
+
+        /* Flaw Badge */
+        .flaw-box {
+            border: 2px solid var(--alert);
+            color: var(--alert);
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+            background: rgba(50, 0, 0, 0.1);
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>GÖK REGISTRY ARCHIVE</header>
+    <div class="sub-header">ACCESS LEVEL: SOLARCH-CLEARANCE // TERMINAL 892-B</div>
+
+    <div class="controls">
+        <button onclick="generateGOK()">[ RETRIEVE UNIT FILE ]</button>
+    </div>
+
+    <div id="output-area" class="fade-in">
+        </div>
+</div>
+
+<script>
+    // --- DICE UTILS ---
+    const d = (sides) => Math.floor(Math.random() * sides) + 1;
+    
+    // --- DATA TABLES ---
+
+    const civilizations = [
+        "Tellurian (Grounded, Bureaucratic, Static Infantry)",
+        "Arenian (Martial, Honour-bound, Duellists)",
+        "Venerian (Diplomatic, Urban, Embedded)",
+        "Caelian (Abstract, Quasi-religious, Metaphysical)",
+        "Jovian (Expansionist, Heavy Force, Authoritarian)",
+        "Syncretic/Unknown (Heretical, Separatist, or Obscure)"
+    ];
+
+    const origins = [
+        { t: "Solarchist Revolution (3rd Mill.)", d: "Founded amid ideological purges. Steeped in myth." },
+        { t: "Rashidun Period (3rd-4th Mill.)", d: "Formed during consolidation. Orthodoxy & unity." },
+        { t: "First Fitna (Early 4th Mill.)", d: "Born in civil conflict. Defined by betrayal/schism." },
+        { t: "Axial Age (4th Mill.)", d: "Established during reform. Rich in doctrine." },
+        { t: "Second Fitna (5th Mill.)", d: "Emergency force. Scarred by brutal counterinsurgency." },
+        { t: "Unknown / Sealed", d: "Records lost, falsified, or disputed." }
+    ];
+
+    const strengths = [
+        "ENDANGERED (Understaffed, Logistical failure)",
+        "UNDER STRENGTH (Budget cuts, Redundant tech)",
+        "UNDER STRENGTH (Budget cuts, Redundant tech)",
+        "NORMAL (Operational, Combat-ready)",
+        "NORMAL (Operational, Combat-ready)",
+        "OVER STRENGTH (High budget, Latest tech, Political backing)"
+    ];
+
+    const alliesList = [
+        "Directorate of Psychonic Affairs",
+        "Translators' Council",
+        "Helioteian Procuracy",
+        "Solar Gendarmerie",
+        "Territorial Defence Forces",
+        "Planetary Mobile Companies"
+    ];
+
+    const enemiesList = [
+        "Eloi", "Morloch", "Entomon", "Chitinsan", "Rival GÖK Unit", "MIXED (Roll Twice)"
+    ];
+
+    const achievements = [
+        { t: "Pacification of a Sector", d: "Suppressed prolonged rebellion or cult." },
+        { t: "Psychonic Containment", d: "Halted uncontrolled psychic breach." },
+        { t: "Decisive Victory (Peer)", d: "Defeated rival GÖK in open conflict." },
+        { t: "Strategic Defence", d: "Held key world against overwhelming odds." },
+        { t: "Xeno-Suppression", d: "Halted major non-human incursion." },
+        { t: "Doctrinal Precedent", d: "Actions justified new laws/reforms." }
+    ];
+
+    const defeats = [
+        { t: "Catastrophic Casualties", d: "Majority strength lost in single campaign." },
+        { t: "Public Failure", d: "Visible defeat damaged political standing." },
+        { t: "Internal Collapse", d: "Mutiny, schism, or mass desertion." },
+        { t: "Strategic Withdrawal", d: "Abandoned objective deemed too costly." },
+        { t: "Psychonic Contamination", d: "Compromised by psychic corruption." },
+        { t: "Censored Defeat", d: "Records sealed by higher authority." }
+    ];
+
+    const legends = [
+        { t: "The Unnamed Commander", d: "Identity erased, orders still quoted." },
+        { t: "The Last Stand", d: "Fought to extinction. Details vary." },
+        { t: "The Forbidden Order", d: "Disavowed order that achieved victory." },
+        { t: "The Silent Victory", d: "Officially denied operation." },
+        { t: "The Traitor-Saint", d: "Hero to some, traitor to others." },
+        { t: "The Lost Banner", d: "Obsession with recovering lost relic." }
+    ];
+
+    const flaws = [
+        { t: "Doctrinal Rigidity", d: "Predictable tactics. Poor adaptation." },
+        { t: "Political Overexposure", d: "Interference. Contradictory orders." },
+        { t: "Veteran Dominance", d: "New personnel sidelined. Resentment." },
+        { t: "Chronic Underfunding", d: "Outdated kit. Scavenging required." },
+        { t: "Reputational Obsession", d: "Risk-averse or reckless for honour." },
+        { t: "Ideological Fracture", d: "Competing loyalties. Potential schism." }
+    ];
+
+    // --- GENERATOR LOGIC ---
+
+    function getEnemies() {
+        let r = d(6);
+        if (r < 6) return enemiesList[r-1];
+        // Mixed
+        let e1 = enemiesList[d(5)-1];
+        let e2 = enemiesList[d(5)-1];
+        if(e1 === e2) return `Major Vendetta: ${e1}`;
+        return `${e1} & ${e2}`;
+    }
+
+    function generateGOK() {
+        const area = document.getElementById('output-area');
+        
+        // Rolls
+        const civ = civilizations[d(6)-1];
+        const origin = origins[d(6)-1];
+        const str = strengths[d(6)-1];
+        
+        const ally = alliesList[d(6)-1];
+        const enemy = getEnemies();
+
+        const ach = achievements[d(6)-1];
+        const def = defeats[d(6)-1];
+        const leg = legends[d(6)-1];
+        
+        const flaw = flaws[d(6)-1];
+
+        // Random Unit Number for flavor
+        const unitNum = d(900) + 100; 
+
+        // HTML Build
+        area.style.display = 'block';
+        area.innerHTML = `
+            <div style="text-align:center; margin-bottom:20px; border-bottom:1px dashed var(--dim); padding-bottom:10px;">
+                <span style="font-size:2em; font-weight:bold;">GÖK UNIT ${unitNum}</span><br>
+                <span style="color:var(--accent);">// STATUS: ${str.split('(')[0]} //</span>
+            </div>
+
+            <div class="profile-grid">
+                
+                <div class="section">
+                    <div class="section-title">HERITAGE & LINEAGE</div>
+                    <div class="data-row">
+                        <span class="label">Tradition</span>
+                        <span class="value">${civ}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="label">Founding Era</span>
+                        <span class="value">${origin.t}</span>
+                        <span class="detail">${origin.d}</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">OPERATIONAL STATUS</div>
+                    <div class="data-row">
+                        <span class="label">Unit Strength</span>
+                        <span class="value">${str}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="label">Primary Ally</span>
+                        <span class="value" style="color:#aaffaa">${ally}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="label">Primary Adversary</span>
+                        <span class="value" style="color:#ffaaaa">${enemy}</span>
+                    </div>
+                </div>
+
+                <div class="section full-width">
+                    <div class="section-title">HISTORICAL RECORD</div>
+                    <div class="profile-grid">
+                        <div>
+                            <span class="label">Notable Achievement</span>
+                            <span class="value">${ach.t}</span>
+                            <span class="detail">${ach.d}</span>
+                        </div>
+                        <div>
+                            <span class="label">Historical Defeat</span>
+                            <span class="value">${def.t}</span>
+                            <span class="detail">${def.d}</span>
+                        </div>
+                        <div class="full-width" style="margin-top:10px; border-top:1px dotted var(--dim); padding-top:5px;">
+                            <span class="label">Unit Legend</span>
+                            <span class="value" style="color:var(--accent)">${leg.t}</span>
+                            <span class="detail">${leg.d}</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="flaw-box">
+                <span class="label" style="color:var(--alert)">>> INSTITUTIONAL FLAW DETECTED <<</span>
+                <div style="font-size:1.6em; font-weight:bold; margin:5px 0;">${flaw.t}</div>
+                <div style="font-style:italic; opacity:0.8;">${flaw.d}</div>
+            </div>
+        `;
+    }
+</script>
+</body>
+</html>

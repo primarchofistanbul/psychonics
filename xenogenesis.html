@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XENOGENESIS - Entomon Lab</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --green: #33ff33; 
+            --dim-green: #1a881a;
+            --bg: #050505;
+            --panel-bg: rgba(0, 20, 0, 0.85);
+            --border: 2px solid var(--green);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--green);
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            text-shadow: 0 0 3px var(--dim-green);
+        }
+
+        /* CRT Overlay */
+        body::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .main-interface {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        @media (max-width: 800px) {
+            .main-interface { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            border: var(--border);
+            background: var(--panel-bg);
+            padding: 20px;
+            box-shadow: 0 0 20px var(--dim-green) inset;
+            position: relative;
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 1px dashed var(--green);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        /* Buttons & Inputs */
+        .big-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: #000;
+            color: var(--green);
+            border: 2px solid var(--green);
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .big-btn:hover {
+            background: var(--green);
+            color: #000;
+            box-shadow: 0 0 15px var(--green);
+        }
+
+        .checkbox-wrapper {
+            margin-top: 15px;
+            border: 1px solid var(--dim-green);
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        input[type="checkbox"] {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--green);
+            margin-right: 10px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: 'X';
+            position: absolute;
+            top: -5px; left: 2px;
+            font-size: 20px;
+            color: var(--green);
+            font-weight: bold;
+        }
+
+        /* Output Styling */
+        .specimen-card {
+            border: 2px solid var(--green);
+            padding: 20px;
+            background: #000;
+            margin-bottom: 20px;
+        }
+
+        .specimen-header {
+            border-bottom: 2px double var(--green);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .specimen-name { font-size: 2rem; line-height: 1; text-transform: uppercase; }
+        .specimen-class { font-size: 1rem; color: var(--dim-green); }
+
+        .stat-line {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted var(--dim-green);
+            padding: 5px 0;
+        }
+
+        .bio-analysis {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #aaddaa;
+        }
+        
+        .bio-entry {
+            margin-bottom: 10px;
+        }
+        .bio-title { font-weight: bold; text-decoration: underline; color: var(--green); }
+        .bio-desc { font-style: italic; opacity: 0.8; }
+
+        .cost-badge {
+            display: inline-block;
+            background: var(--dim-green);
+            color: #000;
+            padding: 2px 6px;
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+
+        .mutation-box {
+            border: 1px dashed var(--green);
+            padding: 10px;
+            margin-top: 15px;
+            background: rgba(50, 0, 0, 0.3);
+        }
+
+        .back-btn {
+            position: fixed; top: 20px; left: 20px; border: 1px solid var(--green); padding: 5px 10px; text-decoration: none; color: var(--green); background: #000; z-index: 1000;
+        }
+        .back-btn:hover { background: var(--green); color: #000; }
+
+    </style>
+</head>
+<body>
+
+<a href="#" class="back-btn" onclick="history.back()">< BACK</a>
+
+<div class="main-interface">
+    
+    <div class="panel">
+        <h2>>> LAB CONTROLS</h2>
+        
+        <p style="text-align: center; color: var(--dim-green);">
+            INITIATE RANDOMIZED<br>GENETIC SPLICING
+        </p>
+
+        <div class="checkbox-wrapper">
+            <label style="cursor: pointer; display: flex; align-items: center;">
+                <input type="checkbox" id="kingToggle"> 
+                <span>ALPHA / KING VARIANT</span>
+            </label>
+        </div>
+
+        <button class="big-btn" onclick="generateSpecimen()">GENERATE SPECIMEN</button>
+        
+        <div style="margin-top: 30px; font-size: 0.9rem; color: var(--dim-green); border-top: 1px solid var(--dim-green); padding-top: 10px;">
+            > CONNECTED TO HIVE MIND<br>
+            > DNA SEQUENCER READY<br>
+            > WAITING FOR INPUT...
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>>> SPECIMEN ANALYSIS</h2>
+        
+        <div id="outputArea" style="display: none;">
+            <div class="specimen-card">
+                <div class="specimen-header">
+                    <div>
+                        <div class="specimen-class" id="outClass">DRONE CASTE</div>
+                        <div class="specimen-name" id="outName">XENO-001</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 0.8rem; color: var(--dim-green);">BIOMORPH VALUATION</span><br>
+                        <span id="outPoints" style="font-size: 1.5rem;">0 PTS</span>
+                    </div>
+                </div>
+
+                <div class="stat-line">
+                    <span>RANGED BIOMORPH</span>
+                    <span id="outRanged">None</span>
+                </div>
+                <div class="stat-line">
+                    <span>MELEE BIOMORPH</span>
+                    <span id="outMelee">None</span>
+                </div>
+                
+                <div id="mutationContainer" class="mutation-box" style="display: none;">
+                    <strong>>> ALPHA MUTATION DETECTED:</strong><br>
+                    <span id="outMutation">None</span>
+                </div>
+            </div>
+
+            <h3>>> BIOLOGICAL ANALYSIS</h3>
+            <div class="bio-analysis" id="bioText">
+                </div>
+        </div>
+
+        <div id="placeholder" style="text-align: center; padding-top: 50px; opacity: 0.5;">
+            [ NO DATA ]<br>PRESS GENERATE
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // === DATA TABLES ===
+
+    const RANGED_TABLE = [
+        { d6: 1, n: "Spinneret", r: "20", s: "-", p: 1, spec: "", desc: "A bulbous organ within the mouth that synthesizes and projects a high-tensile protein chain. This sticky webbing hardens instantly upon contact with air. Does not wound the target, but reduces target's next movement by half." },
+        { d6: 2, n: "Urticator", r: "15", s: "4", p: 1.5, spec: "knockback", desc: "Patches of barbed, irritating setae (hairs) that the entomon can launch by vibrating its chitin plates." },
+        { d6: 3, n: "Spouter", r: "30", s: "3", p: 1.5, spec: "burst", desc: "A muscular valve capable of ejecting a pressurized, cohesive jet of highly acidic slime." },
+        { d6: 4, n: "Stridulator", r: "20", s: "-", p: 2, spec: "psychonic", desc: "Ridge-like structures on the legs or wings which, when rubbed together at hypersonic speeds, create a disorienting psycho-acoustic shriek. Target must take a Morale test, they are confused (cannot perform any other action) for the remainder of the turn." },
+        { d6: 5, n: "Pygidial sprayer", r: "15", s: "4", p: 1.5, spec: "afterburn", desc: "A specialized abdominal gland containing volatile hydroquinones. When ejected, the chemicals react exothermically, spraying boiling liquid fire." },
+        { d6: 6, n: "Spitter", r: "25", s: "3", p: 1, spec: "", desc: "An organ which allows the entomon to spit eurotoxic venom synthesized in glands." }
+    ];
+
+    const MELEE_TABLE = [
+        { d6: 1, n: "Claw", r: "-", s: "Att", p: 0.5, spec: "", desc: "A huge, curved, chitinous appendage ending in a mono-molecular point." },
+        { d6: 2, n: "Chela", r: "-", s: "Att", p: 0.5, spec: "", desc: "Heavy, crushing pincer-like appendages, often at the rear of the abdomen or on forelimbs." },
+        { d6: 3, n: "Stinger", r: "-", s: "Att", p: 1, spec: "shieldbreaker", desc: "A retractable, hypodermic lance used to deliver necrotic venom." },
+        { d6: 4, n: "Proboscis", r: "-", s: "3", p: 0.5, spec: "", desc: "A needle-like feeding tube which inject digestive enzymes, liquefying the target's insides for consumption." },
+        { d6: 5, n: "Raptorial leg", r: "-", s: "4", p: 1, spec: "", desc: "Folding, spiked forelimbs designed to snap shut on prey." },
+        { d6: 6, n: "Mandibles", r: "-", s: "5", p: 2, spec: "shieldbreaker", desc: "Gargantuan, serrated jaws powered by hydraulic muscle sacs." }
+    ];
+
+    const MUTATION_TABLE = [
+        { d6: 1, n: "Acidic blood", p: 5, desc: "The creature has evolved to become hostile even in death. When this figure is slain in melee combat, all enemy figures in base-to-base contact suffer one automatic hit at STR 3." },
+        { d6: 2, n: "Psychic razor", p: 5, desc: "The creature emits a disturbing psychic pulse. All non-entomon enemy figures within 10 cm suffer –1 to their MORALE value while this figure is alive." },
+        { d6: 3, n: "Exoskeleton", p: 5, desc: "A hardened chitinous body armour covers the entire creature. +1 to DEFENCE." },
+        { d6: 4, n: "Regeneration", p: 5, desc: "The creature evolved to survive even the deadliest of attacks. At the start of every turn; roll a die. On a roll of 6, it regenerates 1 wound." },
+        { d6: 5, n: "Behemoth", p: 5, desc: "The creature is so large that it always attacks as if from a higher ground. +1 to attack rolls." },
+        { d6: 6, n: "Nictitating Membrane", p: 5, desc: "The creature has a secondary transparent eyelid with a magnifying lens, improving his vision. +1 to missile rolls." }
+    ];
+
+    // === NEW NAMING LOGIC ===
+    const INSECT_ROOTS = [
+        "Vesp",       // Wasp
+        "Odonat",     // Dragonfly
+        "Meliott",    // Bee
+        "Dipter",     // Fly
+        "Isopter",    // Termite
+        "Myrmec",     // Ant
+        "Orthopter",  // Grasshopper
+        "Coleopter",  // Beetle
+        "Trichopter", // Caddisfly
+        "Arachn",     // Spider
+        "Mantid",     // Mantis
+        "Lepidopter", // Moth/Butterfly
+        "Hemipter"    // True Bug
+    ];
+
+    // Standard Roles (For normal generation)
+    const DRONE_ROLES = [
+        "Hunter", 
+        "Stalker", 
+        "Swarmling", 
+        "Spitter", 
+        "Hopper", 
+        "Burrower", 
+        "Driller", 
+        "Drone", 
+        "Worker", 
+        "Slasher"
+    ];
+
+    // Alpha Roles (For King generation)
+    const KING_ROLES = [
+        "Prime", 
+        "Nexus", 
+        "Juggernaut", 
+        "Tyrant", 
+        "Apex", 
+        "Monarch", 
+        "Imperator", 
+        "Goliath"
+    ];
+
+    function rollD6() {
+        return Math.floor(Math.random() * 6);
+    }
+
+    function generateName(isKing) {
+        const root = INSECT_ROOTS[Math.floor(Math.random() * INSECT_ROOTS.length)];
+        let role = "";
+        
+        if(isKing) {
+            role = KING_ROLES[Math.floor(Math.random() * KING_ROLES.length)];
+        } else {
+            role = DRONE_ROLES[Math.floor(Math.random() * DRONE_ROLES.length)];
+        }
+
+        // Combine: Root + "on" + Space + Role
+        return `${root}on ${role}`;
+    }
+
+    function generateSpecimen() {
+        document.getElementById('placeholder').style.display = 'none';
+        document.getElementById('outputArea').style.display = 'block';
+
+        // 1. Determine Class & Name
+        const isKing = document.getElementById('kingToggle').checked;
+        const className = isKing ? "ALPHA / KING CASTE" : "SUB-SPECIES DRONE";
+        const name = generateName(isKing);
+
+        // 2. Roll Weapons
+        const rIndex = rollD6();
+        const mIndex = rollD6();
+        
+        const rWeapon = RANGED_TABLE[rIndex];
+        const mWeapon = MELEE_TABLE[mIndex];
+
+        // 3. Roll Mutation (if King)
+        let mutation = null;
+        if(isKing) {
+            const mutIndex = rollD6();
+            mutation = MUTATION_TABLE[mutIndex];
+        }
+
+        // 4. Calculate Points (Weapons + Mutation only)
+        let totalPts = rWeapon.p + mWeapon.p;
+        if(mutation) totalPts += mutation.p;
+
+        // 5. Render to DOM
+        document.getElementById('outClass').innerText = className;
+        document.getElementById('outName').innerText = name;
+        document.getElementById('outPoints').innerText = totalPts + " PTS";
+
+        let rText = `${rWeapon.n} (R:${rWeapon.r} S:${rWeapon.s})`;
+        if(rWeapon.spec) rText += ` / ${rWeapon.spec}`;
+        document.getElementById('outRanged').innerHTML = rText + `<span class="cost-badge">${rWeapon.p}</span>`;
+
+        let mText = `${mWeapon.n} (S:${mWeapon.s})`;
+        if(mWeapon.spec) mText += ` / ${mWeapon.spec}`;
+        document.getElementById('outMelee').innerHTML = mText + `<span class="cost-badge">${mWeapon.p}</span>`;
+
+        const mutContainer = document.getElementById('mutationContainer');
+        if(mutation) {
+            mutContainer.style.display = 'block';
+            document.getElementById('outMutation').innerHTML = `${mutation.n} <span class="cost-badge">${mutation.p}</span>`;
+        } else {
+            mutContainer.style.display = 'none';
+        }
+
+        // 6. Bio Analysis Text
+        let bioHtml = "";
+        bioHtml += `<div class="bio-entry"><div class="bio-title">${rWeapon.n}</div><div class="bio-desc">${rWeapon.desc}</div></div>`;
+        bioHtml += `<div class="bio-entry"><div class="bio-title">${mWeapon.n}</div><div class="bio-desc">${mWeapon.desc}</div></div>`;
+
+        if(mutation) {
+            bioHtml += `<div class="bio-entry"><div class="bio-title">${mutation.n}</div><div class="bio-desc">${mutation.desc}</div></div>`;
+        }
+
+        document.getElementById('bioText').innerHTML = bioHtml;
+    }
+
+</script>
+
+</body>
+</html>
